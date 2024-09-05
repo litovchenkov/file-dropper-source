@@ -1,78 +1,81 @@
 import './style.css';
 import Peer from 'peerjs';
+import { nanoid } from 'nanoid';
 
-const peer = new Peer({
-    config: {
-        'iceServers': [
-            {url:'stun:stun.l.google.com:19302'},
-            {url:'stun:stun1.l.google.com:19302'},
-            {url:'stun:stun2.l.google.com:19302'},
-            {url:'stun:stun3.l.google.com:19302'},
-            {url:'stun:stun4.l.google.com:19302'},
-            {url: "stun:stun.relay.metered.ca:80"},
-            {
-                urls: "turn:freeturn.net:3478",
-                username: "free",
-                credential: "free",
-            },
-        ]
-    }
-});
-
+// Cache DOM elements
 const localID = document.getElementById('local-id');
 const remoteID = document.getElementById('remote-id');
 const fileInput = document.getElementById('file-input');
 const downloadBtn = document.getElementById('download-btn');
 const copyBtn = document.getElementById('copy-btn');
 
-copyBtn.addEventListener('click', () => {
-    navigator.clipboard.writeText(localID.innerText).catch(error => {
-        console.error('Error copying ID to clipboard:', error);
-    });
-});
+const uuid = nanoid(8);
+localID.innerText = uuid;
 
-peer.on('open', id => {
-    localID.innerText = id;
+// PeerJS configuration
+const peer = new Peer(uuid, {
+    config: {
+        'iceServers': [
+            {urls: 'stun:stun.l.google.com:19302'},
+            {urls: 'stun:stun1.l.google.com:19302'},
+            {urls: 'stun:stun2.l.google.com:19302'},
+            {urls: 'stun:stun3.l.google.com:19302'},
+            {urls: 'stun:stun4.l.google.com:19302'},
+            {urls: 'stun:stun.relay.metered.ca:80'},
+            {
+                urls: 'turn:freeturn.net:3478',
+                username: 'free',
+                credential: 'free',
+            },
+        ]
+    }
 });
 
 peer.on('error', (error) => {
     console.error('PeerJS error:', error);
 });
 
-let conn = null;
-
-downloadBtn.addEventListener('click', () => {
-    const peerID = remoteID.value;
-    remoteID.value = '';
-    conn = peer.connect(peerID);
-
-    conn.on('open', () => {
-        handleData(conn);
-    });
-
-    conn.on('error', (error) => {
-        console.error('Connection error:', error);
+// Copy local ID to clipboard
+copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(localID.innerText).catch(error => {
+        console.error('Error copying ID:', error);
     });
 });
 
+// Initialize connection variable
+let conn = null;
+
+// Handle download button click event
+downloadBtn.addEventListener('click', () => {
+    const peerID = remoteID.value.trim();
+    if (peerID) {
+        remoteID.value = '';
+        conn = peer.connect(peerID);
+        
+        conn.on('open', () => handleData(conn));
+        conn.on('error', error => console.error('Connection error:', error));
+    } else {
+        console.warn('No remote peer ID provided');
+    }
+});
+
+// File handling
 let fileBlob = null;
-fileInput.addEventListener('change', function(event) {
+fileInput.addEventListener('change', event => {
     const file = event.target.files[0];
     if (file) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-            const arrayBuffer = e.target.result;
-            fileBlob = new Blob([arrayBuffer], { type: file.type });
+        reader.onload = e => {
+            fileBlob = new Blob([e.target.result], { type: file.type });
         };
-        reader.onerror = function(error) {
-            console.error('File reading error:', error);
-        };
+        reader.onerror = error => console.error('File reading error:', error);
         reader.readAsArrayBuffer(file);
     } else {
         console.warn('No file selected');
     }
 });
 
+// Handle incoming connection
 peer.on('connection', connection => {
     conn = connection;
     conn.on('open', () => {
@@ -83,15 +86,13 @@ peer.on('connection', connection => {
             };
             conn.send(fileObj);
         } else {
-            console.warn('No file blob to send');
+            console.warn('No file to send');
         }
     });
-
-    conn.on('error', (error) => {
-        console.error('Connection error:', error);
-    });
+    conn.on('error', error => console.error('Connection error:', error));
 });
 
+// Handle data transfer
 function handleData(connection) {
     connection.on('data', data => {
         try {
@@ -103,15 +104,13 @@ function handleData(connection) {
             a.download = data.name;
             document.body.appendChild(a);
             a.click();
-            document.body.removeChild(a);
 
+            document.body.removeChild(a);
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error('Error handling received data:', error);
+            console.error('Error processing received data:', error);
         }
     });
 
-    connection.on('error', (error) => {
-        console.error('Data receiving error:', error);
-    });
+    connection.on('error', error => console.error('Data transfer error:', error));
 }
