@@ -1,5 +1,20 @@
-* {
-    font-family: monospace;
-    font-size: 3vh;
-    margin: 0.5vh;
+input[type="file"] {
+    display: none;
+}
+
+.file-input {
+    height: 24vh;
+    border: 2px dotted black;
+    border-radius: 1em;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.file-input:hover {
+    cursor: pointer;
+}
+
+#drop-zone.dragover {
+    background-color: #f0f0f0;
+    border-color: #333;
 }
