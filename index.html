@@ -19,7 +19,9 @@
             </label>
             <p>Uploaded file: <span id="file-name">none</span></p>
             <input class="m-1" id="remote-id" type="text" placeholder="Enter file ID">
-            <button class="m-1" id="download-btn">Download</button>
+            <button class="m-1" id="download-btn">Download</button><br>
+            <progress class="w-75" id="file-progress" max="100"></progress>
+            <div id="total-size"></div>
         </div>
 
     <script type="module" src="/main.js"></script>
